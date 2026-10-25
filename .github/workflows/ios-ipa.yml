@@ -52,7 +52,16 @@ jobs:
         run: |
           flutter --version
           xcodebuild -version
-          pod --version || true
+
+      - name: Enable Swift Package Manager
+        run: |
+          # Flutter 3.47 的模板是 SPM 工程：Podfile 会把项目拉回 CocoaPods，
+          # 两者混用会在 xcodebuild 阶段报 "sandbox is not in sync with the Podfile.lock"。
+          flutter config --enable-swift-package-manager
+          if [ -f ios/Podfile ]; then
+            echo "::error::ios/Podfile 存在：SPM 与 CocoaPods 混用会让构建失败，请删掉它"
+            exit 1
+          fi
 
       - name: Pub get
         run: flutter pub get

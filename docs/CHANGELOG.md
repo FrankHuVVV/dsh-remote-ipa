@@ -6,6 +6,31 @@
 
 （尚无）
 
+## 0.2.1 — 2026-10-25
+
+修复首次云端构建失败（`v0.2.0` 的 run 在 Build iOS app 步骤报
+`The sandbox is not in sync with the Podfile.lock`）。
+
+### 修复
+
+- **删除 `app/ios/Podfile`**：Flutter 3.47 的模板是 Swift Package Manager 工程
+  （`project.pbxproj` 已引用 `FlutterGeneratedPluginSwiftPackage`），所有插件也都带
+  `Package.swift`；手写 Podfile 会让项目同时启用 CocoaPods，两套依赖系统互相改
+  project / xcconfig，构建期必然对不上。
+- **CI**：新增 `Enable Swift Package Manager` 步骤（`flutter config --enable-swift-package-manager`），
+  并断言 `test ! -f ios/Podfile` —— 再有人加回 Podfile，构建会**立刻**报一句可读的错误，
+  而不是等到 Xcode 阶段才出现 sandbox 报错。
+
+### 变更
+
+- 版本 / 构建号：`0.2.1+3`；`build_stamp` 与 `MARKETING_VERSION` 同步。
+- 文档：`PITFALLS` 用「Podfile 与 Swift Package Manager 混用」替换原 Podfile 部署目标条目，
+  `STATUS` 增加云端构建记录，`AGENTS` 坑位索引同步。
+
+### 验证
+
+- `flutter analyze` → No issues；`flutter test` → 175 passed（仅构建配置变更，逻辑未动）。
+
 ## 0.2.0 — 2026-10-25
 
 把 0.1.0 里列为「未实现」的能力补齐，并补上一条可在 macOS 上执行的出包脚本。

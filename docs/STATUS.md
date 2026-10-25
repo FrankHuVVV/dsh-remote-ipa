@@ -43,6 +43,15 @@ bash tools/build_ios.sh 0.2.0 2        # 一键：analyze + test + build + 打�
 或推 tag 让 `.github/workflows/ios-ipa.yml` 在 `macos-15` 上出包。相关约束写进
 `docs/PITFALLS.md#xcode-与-flutter-版本错配` 与 `docs/RELEASE.md` §1.2。
 
+### 云端构建记录
+
+| 次数 | commit / tag | 结果 | 原因 |
+|---:|---|---|---|
+| #1 | `e71b066` / `v0.2.0` | ❌ 失败于 Build iOS app | 手写 `ios/Podfile` 与 SPM 工程混用 → `sandbox is not in sync with the Podfile.lock` |
+| #2 | 待推 `v0.2.1` | ⏳ 待跑 | 已删除 Podfile，CI 显式开 SPM 并断言无 Podfile |
+
+修复提交见 `docs/CHANGELOG.md` 0.2.1 段；坑位说明见 `docs/PITFALLS.md#podfile-与-swift-package-manager-混用`。
+
 ## 已实现
 
 - **连接**：多主机 / 多地址、并发探活 + 四级选路、配对码、`DSH1:` 配置导入、

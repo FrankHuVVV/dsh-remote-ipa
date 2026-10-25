@@ -8,7 +8,7 @@
 - [x] Flutter iOS 工程（iOS only）+ 依赖选型（http / ws / 钥匙串 / prefs / file_picker / timezone / url_launcher）
 - [x] 四层目录与依赖方向（core / state / ui / platform）
 - [x] 应用图标生成脚本
-- [x] Info.plist（显示名 / 本地网络 / 相册 / ATS）+ Bundle ID + 部署目标 15.0 + Podfile
+- [x] Info.plist（显示名 / 本地网络 / 相册 / ATS）+ Bundle ID + 部署目标 15.0（SPM 工程，无 Podfile）
 - [x] `AGENTS.md` 与 `docs/` 骨架
 
 ## P1 · 核心链路 ✅

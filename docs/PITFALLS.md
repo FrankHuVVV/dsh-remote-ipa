@@ -68,12 +68,19 @@ Info.plist 没有用途说明时系统不会给出可读文案，且拒绝后**�
 **怎么绕**：CI 里先打印 `xcodebuild -version`（workflow 已做）；本地失败先跑 `flutter doctor -v`。
 升级 Xcode 与升级 Flutter **一次只动一个**，否则出问题分不清是谁的锅。
 
-### Podfile 平台版本被依赖拉回 12
+### Podfile 与 Swift Package Manager 混用
 
-**长什么样**：pod install 后警告 `deployment target is set to 12.0`，或插件编译失败。
-**为什么**：CocoaPods 默认按每个 pod 的最低部署版本生成工程；不显式声明就会被拉回很低的版本。
-**怎么绕**：`ios/Podfile` 第一行 `platform :ios, '15.0'`，并在 `post_install` 里把每个 target 的
-`IPHONEOS_DEPLOYMENT_TARGET` 再设一遍（本仓库两处都做了）；`project.pbxproj` 里三处同为 15.0。
+**长什么样**：CI 上 `flutter build ios` 走了 `pod install`，Xcode 阶段报
+`The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.`
+**为什么**：Flutter 3.47 的 iOS 模板是 **SPM 工程**（`project.pbxproj` 里已经有
+`FlutterGeneratedPluginSwiftPackage` 的 `XCLocalSwiftPackageReference`），
+所有插件也都带 `Package.swift`。此时再放一个手写 `Podfile`，Flutter 会同时启用
+CocoaPods 集成，两套依赖系统互相改 project / xcconfig，构建期必然对不上。
+构建日志里会先给一句提示：
+`All plugins found for ios are Swift Packages, but your project still has CocoaPods integration.`
+**怎么绕**：**不要有 `ios/Podfile`**。CI 里显式 `flutter config --enable-swift-package-manager`，
+并在构建前断言 `test ! -f ios/Podfile`。部署目标在 `project.pbxproj` 的
+`IPHONEOS_DEPLOYMENT_TARGET` 里改（三处），不需要 Podfile。
 
 ### file_picker 13 的静态 API
 

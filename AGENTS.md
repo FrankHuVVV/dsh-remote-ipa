@@ -175,7 +175,7 @@ lib/platform/← 唯一碰系统 API 的一层（HTTP / WS / 钥匙串 / 时区 
 - `未签名 IPA 直接装必失败`
 - `iOS 27 开发者模式没开`
 - `Xcode 与 Flutter 版本错配`
-- `Podfile 平台版本被依赖拉回 12`
+- `Podfile 与 Swift Package Manager 混用`
 - `file_picker 13 的静态 API`
 - `TextScaler 双重缩放`
 - `键盘顶起输入区`

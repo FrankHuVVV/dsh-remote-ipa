@@ -29,6 +29,10 @@ iPhone：设置 → 通用 → VPN与设备管理 → 信任该开发者
 
 ---
 
+> 本工程是 **Swift Package Manager** 工程（Flutter 3.47 模板），**没有 Podfile**。
+> 不要往 `ios/` 里加 Podfile —— 会和 SPM 混用，构建期报
+> `sandbox is not in sync with the Podfile.lock`（见 `docs/PITFALLS.md`）。
+
 ## 1. 出包（二选一）
 
 ### 1.1 云端（推荐）
