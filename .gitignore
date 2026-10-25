@@ -1,0 +1,15 @@
+# 本地工具链与构建产物 —— 不参与版本管理
+_toolchain/
+**/build/
+**/.dart_tool/
+**/.flutter-plugins-dependencies
+**/Pods/
+**/*.ipa
+**/*.ipa.sha256
+**/Payload/
+
+# 签名材料：任何情况下都不进仓库
+*.p12
+*.mobileprovision
+*.cer
+*.provisionprofile

@@ -1,0 +1,129 @@
+name: ios-ipa
+
+# 只做一件事：在 macOS runner 上构建**未签名** IPA，交给本地签名工具处理。
+#
+# 为什么不在 CI 里签名：证书与描述文件属于用户自己的 Apple ID，塞进仓库或 CI Secret
+# 都意味着把签名身份复制到第三处；本项目的口径是「CI 只出产物，签名在本地做」，
+# 完整流程见 docs/RELEASE.md。
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      build_number:
+        description: 'CFBundleVersion（默认取 run number）'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ios-ipa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-ipa:
+    name: build unsigned ipa
+    runs-on: macos-15
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: app
+    env:
+      FLUTTER_VERSION: '3.47.8'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Toolchain info
+        run: |
+          flutter --version
+          xcodebuild -version
+          pod --version || true
+
+      - name: Pub get
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos
+
+      - name: Unit tests
+        run: flutter test --reporter expanded
+
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="$(grep -E '^version:' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)"
+          fi
+          BUILD_NUMBER="${{ inputs.build_number }}"
+          if [[ -z "$BUILD_NUMBER" ]]; then
+            BUILD_NUMBER="${GITHUB_RUN_NUMBER}"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
+
+      - name: Build iOS app (no codesign)
+        run: |
+          set -euo pipefail
+          flutter build ios \
+            --release \
+            --no-codesign \
+            --build-name "${{ steps.version.outputs.version }}" \
+            --build-number "${{ steps.version.outputs.build_number }}" \
+            --dart-define=BUILD_COMMIT="${GITHUB_SHA}" \
+            --dart-define=BUILD_TIME="$(date -u +%Y-%m-%dT%H:%MZ)" \
+            --dart-define=APP_VERSION="${{ steps.version.outputs.version }}" \
+            --dart-define=APP_BUILD_NUMBER="${{ steps.version.outputs.build_number }}"
+
+      - name: Package unsigned IPA
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP_PATH="build/ios/iphoneos/Runner.app"
+          test -d "$APP_PATH"
+          rm -rf Payload
+          mkdir -p Payload
+          cp -R "$APP_PATH" Payload/
+          IPA="DSHCompanion-${{ steps.version.outputs.version }}-${{ steps.version.outputs.build_number }}-unsigned.ipa"
+          zip -qry "$IPA" Payload
+          shasum -a 256 "$IPA" | tee "$IPA.sha256"
+          du -h "$IPA"
+          echo "ipa=$IPA" >> "$GITHUB_OUTPUT"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DSHCompanion-unsigned-ipa
+          path: |
+            app/DSHCompanion-*.ipa
+            app/DSHCompanion-*.ipa.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            app/DSHCompanion-*.ipa
+            app/DSHCompanion-*.ipa.sha256
+          generate_release_notes: true

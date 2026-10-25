@@ -1,0 +1,85 @@
+# 状态
+
+> 更新时间：2026-10-25（版本 0.2.0+2）。**四态必须分清**：打包 → 签名 → 装机 → 验证。
+> 本页只写**实测过**的东西；没上过真机的一律 🟡。
+
+## 一句话
+
+iOS 版（Flutter）已完成功能移植：连接 / 会话 / 聊天 / GenUI 卡片 / 审批 / 问答 /
+`@` 文件与 `/` 命令补全 / 文件（浏览·编辑·上传·回收站·导出）/ 插件 / 模型（含供应商编辑）/
+设置 / 轨迹与统计，全部可用。`flutter analyze` **No issues**、`flutter test` **175 用例全绿**。
+**尚未出过 IPA，也尚未上机** —— 因为当前开发机是 Windows，而 iOS 构建只支持 macOS。
+
+## 四态
+
+| 阶段 | 状态 | 证据 / 缺口 |
+|---|---|---|
+| 源码完成 | ✅ | `app/lib/` 约 13.7k 行 Dart（53 个文件），测试 2.1k 行，按 `core/state/ui/platform` 分层 |
+| 静态检查 | ✅ | `flutter analyze --no-fatal-infos` → **No issues found**（Flutter 3.47.8） |
+| 单测 | ✅ | `flutter test` → **175 passed**（2026-10-25，本机 Windows + Flutter 3.47.8） |
+| 打包（未签名 IPA） | 🟡 | 脚本与 workflow 就位，**尚未在 macOS 上执行过**；本机无法执行（见下） |
+| 签名（爱思助手） | 🟡 | 流程写在 `docs/RELEASE.md`，未用真实 Apple ID 执行过 |
+| 装机（iLoader 侧载） | 🟡 | 未上机；iOS 27 开发者模式、证书信任未实测 |
+| 真机验证 | 🟡 | **0 项已确认**；清单见 `docs/PARITY.md` §6 |
+
+### 本机出包尝试记录（2026-10-25）
+
+```text
+$ cd app && flutter build ios --release --no-codesign
+Could not find an option named "--release".
+
+$ flutter build --help
+Available subcommands:
+  aar  apk  appbundle  bundle  web  windows
+```
+
+Windows 版 Flutter **不注册 `ios` 子命令**（iOS 构建只在 macOS 上可用）；
+本机也没有 `xcodebuild` / `pod`。因此这一步必须在 macOS 上做：
+
+```bash
+bash tools/build_ios.sh 0.2.0 2        # 一键：analyze + test + build + 打包
+```
+
+或推 tag 让 `.github/workflows/ios-ipa.yml` 在 `macos-15` 上出包。相关约束写进
+`docs/PITFALLS.md#xcode-与-flutter-版本错配` 与 `docs/RELEASE.md` §1.2。
+
+## 已实现
+
+- **连接**：多主机 / 多地址、并发探活 + 四级选路、配对码、`DSH1:` 配置导入、
+  冷启动自动重连、断开保留凭据、逐地址诊断。
+- **会话**：列表分组、新建、重命名、分叉、归档、归档列表（能力位守卫）。
+- **聊天**：WS 流式 + REST 历史合并、Markdown、工具合并与明细、失败行（空 code）、
+  思考折叠、上下文块、时间戳、图片（历史附件 + 交接图）、审批、问答、命令执行、
+  模型切换、停止运行、会话内图片导出。
+- **GenUI**：`dsh-ui` 围栏切成卡片，23 种组件里实现 21 种（text/row/col/grid/card/
+  list/table/keyvalue/steps/stat/badge/progress/chart/code/json/diff/callout/timeline/
+  divider/spacer/button/radio/submit），未知类型整条丢弃、坏 JSON 回落原文。
+  交互组件（button/radio/submit）点下去作为普通用户消息回话。
+- **补全**：`@` 文件补全（目录优先、绝对路径、目录补 `/`）与 `/` 命令补全（整行前缀、
+  无空白、上限 5 条）；`/` 开头的输入按命令执行而不是当消息发。
+- **洞察**：待办、交付物、执行统计（不编 Token 用量）、执行轨迹（按 turn 分组、
+  认不得的事件保留类型原名、可看原始 JSON）。
+- **文件**：授权根、目录浏览、Markdown 预览/源码、编辑保存（ETag）、图片预览、
+  上传新文件、回收站列表与恢复、导出到「文件」App（Documents/Exports）。
+- **插件**：清单、四态、启停（提示重启）、查更新。
+- **模型**：供应商只读 + 编辑（displayName/baseURL/api/apiKey，**apiKey 不回填**）、
+  发现模型、权限档位切换（走 `/permission` 命令）。
+- **设置**：主题三档、字号（跟随系统 / 0.8–1.5）、中英、上下文开关、发送方式、
+  连接信息与切换、断开、版本与构建水印、隐私说明。
+- **平台**：令牌进钥匙串、前后台事件流暂停/恢复、本地网络与 ATS、文件 App 可见、
+  全套 AppIcon。
+
+## 尚未实现（与鸿蒙版的差距）
+
+- 图片**存入相册**：改成导出到「文件」App（`Documents/Exports`）。见 `docs/PARITY.md` §5。
+- `dsh-ui` 的交互结果不回写历史（选中态随消息重建，照鸿蒙版：刷新后回到没选）。
+- 会话列表里的**摘要**（TODO / 当前工具）只在会话洞察面板里看，不在列表行上。
+- 文件「替换当前文件」的上传入口没有单独做（上传新文件 + 编辑保存已覆盖）。
+- 鸿蒙版的 `useWebChat` 假开关（iOS 无 WebView 分支，刻意不保留）。
+
+## 已知风险
+
+1. **未跑过 iOS 构建**：首次 macOS 构建最可能卡 CocoaPods / Xcode 版本 / 插件最低版本。
+2. **免费签名 7 天到期**：分发方式的固有约束，不是 bug。
+3. **重新签名后钥匙串可能读不到**：旧令牌取不出时需重新配对。
+4. **局域网明文 HTTP**：只放行本地网络；公网中继必须 https。
