@@ -13,3 +13,7 @@ _toolchain/
 *.mobileprovision
 *.cer
 *.provisionprofile
+
+# 本地下载的发布产物（CI 会在 Releases 里留一份）
+artifacts/
+ci-artifact/

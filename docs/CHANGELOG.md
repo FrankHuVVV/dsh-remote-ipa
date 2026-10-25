@@ -30,6 +30,10 @@
 ### 验证
 
 - `flutter analyze` → No issues；`flutter test` → 175 passed（仅构建配置变更，逻辑未动）。
+- GitHub `macos-15` 构建 **通过**（run 40207148670）：未签名 IPA 7,907,704 B，
+  SHA-256 `e0563badfd2cf1dcfa6788d3c1cb1ee3a6ec84ba9f28f061a7d6c68ba15366e2`，已随 Release v0.2.1 发布。
+  结构校验：arm64、`com.dsh.companion.ios`、0.2.1(3)、MinimumOSVersion 15.0、
+  Frameworks = Flutter / App / objective_c、**无** `embedded.mobileprovision`（未签名）。
 
 ## 0.2.0 — 2026-10-25
 
