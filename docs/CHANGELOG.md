@@ -6,6 +6,33 @@
 
 （尚无）
 
+## 0.2.3 — 2026-10-26
+
+第二轮真机反馈：事件流、权限档位、会话分组与图片保存。
+
+### 修复
+
+- **事件流一直离线**：真机报 `WebSocketException: Unsupported URL scheme 'https'` ——
+  `dart:io` 的 WebSocket 只认 `ws://` / `wss://`，不能像 OkHttp 那样把 https 交给底层升级。
+  现在在平台层入口用 `socketUrlOf()` 把 http(s) 换成 ws(s)（core 仍只产出同源地址，可单测）。
+- **权限只有两个 chip、没有高亮**：`/chat/permission-presets` 只返回 workspace-write 与
+  danger-full-access；`read-only` 与 `auto` 要客户端补。现在固定四档
+  （只读 / 工作区内修改 / 自动审查 / 完全权限），当前值优先取**会话投影**，
+  选中态用 `primaryContainer` + 加粗 + 边框强调；切换后重拉历史让投影跟上。
+
+### 变更
+
+- **会话列表改按工作区分组**（不再按今天/昨天/本周）：组键 = workspaceId → workspaceTitle →
+  未分组；组间按组内最新更新时间倒序，组内也倒序。纯逻辑在 `core/workspace_groups.dart`。
+- **图片可保存到相册**：会话图片全屏页新增「保存到相册」，走 `gal`（只申请添加权限，
+  Info.plist 增 `NSPhotoLibraryAddUsageDescription`）；「存到文件」保留。
+
+### 验证
+
+- `flutter analyze` → No issues；`flutter test` → **194 passed**（新增 15 条：权限档位 7、
+  WS 地址换算 4、工作区分组 5，其中一条合并计入）。
+- 待打包后复验（用户要求先改代码、等通知再出包）。
+
 ## 0.2.2 — 2026-10-26
 
 首次真机侧载（0.2.1）后按用户反馈修的六处问题。

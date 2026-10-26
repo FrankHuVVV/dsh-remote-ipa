@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../core/models.dart';
 import '../core/small_parts.dart';
+import '../core/workspace_groups.dart';
 import '../l10n/strings.dart';
 import '../state/harness_view_model.dart';
 import 'chat_screen.dart';
@@ -25,17 +26,7 @@ class SessionsScreen extends StatelessWidget {
       builder: (BuildContext context, _) {
         final state = viewModel.state;
         final sessions = state.sessions;
-        final groups = <String, List<ChatSession>>{};
-        for (final session in sessions) {
-          final key = sessionGroupOf(session.updatedAt);
-          groups.putIfAbsent(key, () => <ChatSession>[]).add(session);
-        }
-        const order = <String>[
-          sessionGroupToday,
-          sessionGroupYesterday,
-          sessionGroupWeek,
-          sessionGroupEarlier,
-        ];
+        final groups = groupSessionsByWorkspace(sessions);
         return Scaffold(
           appBar: AppBar(
             title: Column(
@@ -81,20 +72,37 @@ class SessionsScreen extends StatelessWidget {
                         child: ListView(
                           padding: const EdgeInsets.only(bottom: 88),
                           children: <Widget>[
-                            for (final key in order)
-                              if ((groups[key] ?? const <ChatSession>[]).isNotEmpty) ...<Widget>[
-                                Padding(
-                                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
-                                  child: Text(
-                                    key,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            for (final group in groups) ...<Widget>[
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+                                child: Row(
+                                  children: <Widget>[
+                                    Expanded(
+                                      child: Text(
+                                        group.isUngrouped
+                                            ? s.get('no_workspace')
+                                            : (group.title.isEmpty ? group.key : group.title),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                        ),
+                                      ),
                                     ),
-                                  ),
+                                    Text(
+                                      '${group.sessions.length}',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Theme.of(context).colorScheme.outline,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                for (final session in groups[key]!) _row(context, session),
-                              ],
+                              ),
+                              for (final session in group.sessions) _row(context, session),
+                            ],
                           ],
                         ),
                       ),

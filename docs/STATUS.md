@@ -1,13 +1,13 @@
 # 状态
 
-> 更新时间：2026-10-26（版本 0.2.2+4）。**四态必须分清**：打包 → 签名 → 装机 → 验证。
+> 更新时间：2026-10-26（版本 0.2.3+5）。**四态必须分清**：打包 → 签名 → 装机 → 验证。
 > 本页只写**实测过**的东西；没上过真机的一律 🟡。
 
 ## 一句话
 
 iOS 版（Flutter）已完成功能移植：连接 / 会话 / 聊天 / GenUI 卡片 / 审批 / 问答 /
 `@` 文件与 `/` 命令补全 / 文件（浏览·编辑·上传·回收站·导出）/ 插件 / 模型（含供应商编辑）/
-设置 / 轨迹与统计，全部可用。`flutter analyze` **No issues**、`flutter test` **179 用例全绿**。
+设置 / 轨迹与统计，全部可用。`flutter analyze` **No issues**、`flutter test` **194 用例全绿**。
 **已在 GitHub 的 macOS runner 上出包**（未签名 IPA，见下）；签名与装机尚未执行。
 
 ## 真机反馈（2026-10-26，0.2.1 首次侧载）
@@ -23,13 +23,22 @@ iOS 版（Flutter）已完成功能移植：连接 / 会话 / 聊天 / GenUI 卡
 | 5 | 模型回复的图片看不到 | `assistantItems` 忽略 `image` 块与交接标记 | 助手消息解析图片块/交接图，附件正常显示；路径链接改为应用内预览 |
 | 6 | “+”无法从图库选图 | 只用了 `file_picker`（文件选择器） | 改为「图库 / 文件」两个来源，图库走 `image_picker` |
 
+## 真机反馈（第二轮，2026-10-26，0.2.2）
+
+| # | 现象 | 根因 | 修复 |
+|---:|---|---|---|
+| 1 | 设置页仍离线，报 `Unsupported URL scheme 'https'`，但会话可用 | `dart:io WebSocket` 只认 ws/wss | 平台层 `socketUrlOf()` 把 http(s) 换成 ws(s) |
+| 2 | 权限只有两个 chip、无选中强调 | 服务端目录缺 `read-only` / `auto`，且当前值取自目录 | 内置四档 + 当前值取会话投影 + 选中强调 |
+| 3 | 会话列表按时间分组 | 产品要求按工作区 | `groupSessionsByWorkspace()`，组内/组间按更新时间倒序 |
+| 4 | 聊天图片无法保存到手机 | 只有「存到文件」 | 全屏页加「保存到相册」（`gal` + 添加权限说明） |
+
 ## 四态
 
 | 阶段 | 状态 | 证据 / 缺口 |
 |---|---|---|
 | 源码完成 | ✅ | `app/lib/` 约 13.7k 行 Dart（53 个文件），测试 2.1k 行，按 `core/state/ui/platform` 分层 |
 | 静态检查 | ✅ | `flutter analyze --no-fatal-infos` → **No issues found**（Flutter 3.47.8） |
-| 单测 | ✅ | `flutter test` → **179 passed**（2026-10-25，本机 Windows + Flutter 3.47.8） |
+| 单测 | ✅ | `flutter test` → **194 passed**（2026-10-25，本机 Windows + Flutter 3.47.8） |
 | 打包（未签名 IPA） | ✅ | 最新：[`v0.2.2`](https://github.com/FrankHuVVV/dsh-remote-ipa/releases/tag/v0.2.2)（run 40294523178）IPA **7,987,474 B**，SHA-256 `127b4730c61e896c4cb6c7173b856882705f51ea8f374a1a38f892c2f453904f` |
 | 签名（爱思助手） | 🟡 | 流程写在 `docs/RELEASE.md`，未用真实 Apple ID 执行过 |
 | 装机（iLoader 侧载） | 🟡 | 未上机；iOS 27 开发者模式、证书信任未实测 |

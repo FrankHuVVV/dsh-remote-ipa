@@ -4,7 +4,7 @@
 /// （`_composer` / `_attachments` / `s` / `vm`），行为与拆之前完全一致。
 part of 'chat_screen.dart';
 
-extension ChatComposerActions on _ChatScreenState {
+extension _ChatComposerActions on _ChatScreenState {
   // ————————————————— 输入区 —————————————————
 
   Widget _composerBar(BuildContext context, HarnessState state) {

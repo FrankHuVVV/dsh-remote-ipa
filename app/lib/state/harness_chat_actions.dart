@@ -295,7 +295,9 @@ extension HarnessChatActions on HarnessViewModel {
     await _launch(() async {
       final execution = await client.executeCommand(sessionId, '/permission $preset');
       final text = execution.result.text;
+      // 投影（currentValue）要重拉历史才会更新；只刷新目录会让 chip 高亮停在旧档位。
       await refreshPermissionCatalog();
+      await loadHistory();
       if (text != null && text.trim().isNotEmpty) {
         _update((s) => s.notice = text);
       }

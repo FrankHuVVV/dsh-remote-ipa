@@ -75,6 +75,8 @@
 	<!-- 选择附件 / 保存图片时需要相册读取权限；不写这一条，系统会在第一次选图时崩溃。 -->
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>用于选择图片作为消息附件发送给你电脑上的智能体。</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>用于把会话里的图片保存到你的相册。</string>
 
 	<!-- ATS：只放行本地网络明文，公网仍强制 https。
 	     家里电脑的 DSH 通常监听 3090 且没有证书；把它放宽到「任意明文」等于给所有域名开后门，

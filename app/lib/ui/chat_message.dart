@@ -26,6 +26,7 @@ class ChatMessageView extends StatelessWidget {
     required this.onAnswer,
     this.onOpenPath,
     this.onExportImage,
+    this.onSaveToAlbum,
     this.onFork,
   });
 
@@ -39,6 +40,7 @@ class ChatMessageView extends StatelessWidget {
   final void Function(String text) onAnswer;
   final void Function(String path)? onOpenPath;
   final Future<void> Function(String name, List<int> bytes)? onExportImage;
+  final Future<void> Function(String name, List<int> bytes)? onSaveToAlbum;
   final void Function(ChatDisplayItem item)? onFork;
 
   @override
@@ -165,8 +167,15 @@ class ChatMessageView extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
                   Text(name, style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                  if (onExportImage != null) ...<Widget>[
+                  if (onSaveToAlbum != null) ...<Widget>[
                     const SizedBox(width: 12),
+                    TextButton(
+                      onPressed: () => onSaveToAlbum!(name, bytes),
+                      child: Text(strings.get('save_to_album')),
+                    ),
+                  ],
+                  if (onExportImage != null) ...<Widget>[
+                    const SizedBox(width: 4),
                     TextButton(
                       onPressed: () => onExportImage!(name, bytes),
                       child: Text(strings.get('save_to_files')),

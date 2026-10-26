@@ -268,3 +268,31 @@ GenUI 的 `table` 节点同理（`genUiTableColumnWidth` 已有下限）。
 **怎么绕**：附件入口给两个来源：「从图库选择」走 `image_picker`（PHPicker 不需要相册写入权限），
 「从文件选择」走 `file_picker`。不要试图用 `FileType.image` 让文件选择器去翻相册。
 
+### dart:io WebSocket 不认 https
+
+**长什么样**：设置页一直离线，显示 `WS: WebSocketException: Unsupported URL scheme 'https'`；
+REST 一切正常（会话能刷、能发指令）。
+**为什么**：服务端契约要求「同源 http(s) URL，由底层做协议升级」——那是 OkHttp / 鸿蒙的口径。
+Dart 的 `dart:io WebSocket` 在握手前就检查 scheme，只接受 `ws` / `wss`，
+`https` 直接抛异常，连尝试升级的机会都没有。
+**怎么绕**：在**平台层入口**做一次换算（`core/socket_url.dart` 的 `socketUrlOf`：
+`http→ws`、`https→wss`），core 继续只产出同源地址。不要把换算散到各个调用点。
+
+### 权限目录只有两项
+
+**长什么样**：会话里的权限只有「工作区内修改」「完全权限」两个 chip，没有「只读」「自动审查」，
+而且当前是 `auto` 时一个都不高亮。
+**为什么**：`/chat/permission-presets` 只返回 workspace-write 与 danger-full-access，
+但 `/permission <preset>` 实际支持 `read-only` 与 `auto`；当前值又来自会话投影，
+目录里的 `currentValue` 不一定同步。
+**怎么绕**：内置四档 + 目录里多出的值追加；当前值**优先取投影**
+（`projections.values.permissions.currentValue`），切换后重拉历史让投影跟上。
+
+### 相册保存要 NSPhotoLibraryAddUsageDescription
+
+**长什么样**：点「保存到相册」没反应，或第一次就报权限错误。
+**为什么**：写相册属于「添加」权限，iOS 要求 Info.plist 里有专门的
+`NSPhotoLibraryAddUsageDescription`（不是读取用的那条）；缺了会直接失败。
+**怎么绕**：补这条说明；用 `gal` 的 `hasAccess(toAlbum: true)` / `requestAccess(...)`，
+只申请添加权限，不申请读取整库。
+

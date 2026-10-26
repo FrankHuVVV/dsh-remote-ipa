@@ -7,8 +7,10 @@
 library;
 
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:gal/gal.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 
@@ -16,6 +18,7 @@ import '../core/chat_presentation.dart';
 import '../core/composer_suggestions.dart';
 import '../core/mention_query.dart';
 import '../core/models.dart';
+import '../core/permission_presets.dart';
 import '../core/session_stats.dart';
 import '../l10n/strings.dart';
 import '../core/small_parts.dart';
@@ -251,6 +254,7 @@ class _ChatScreenState extends State<ChatScreen> {
           onLoadAttachment: vm.loadAttachment,
           onAnswer: (String text) => vm.sendMessage(text),
           onOpenPath: (String path) => unawaited(_openChatPath(path)),
+          onSaveToAlbum: (String name, List<int> bytes) => _saveImageToAlbum(name, bytes),
           onExportImage: (String name, List<int> bytes) => vm.exportBytes(name, bytes),
           onFork: (ChatDisplayItem chatItem) async {
             final ok = await confirmDialog(
@@ -466,55 +470,94 @@ class _ChatScreenState extends State<ChatScreen> {
     return parts.join(' · ');
   }
 
-  /// 会话内的权限档位按钮条：候选项来自 `chat/permission-presets`，切换走 `/permission`。
+  /// 会话内的权限档位按钮条。
+  ///
+  /// 候选项 = 目录（`/chat/permission-presets`）+ 内置四档（目录缺 `read-only` / `auto`）；
+  /// 当前值优先取**会话投影**，所以 PC 端切到 auto 后手机上高亮也在 auto。
   Widget _permissionBar(BuildContext context, HarnessState state) {
     final catalog = state.permissionCatalog;
-    final options = catalog?.options ?? const <PermissionOption>[];
-    if (options.isEmpty) {
-      return Align(
-        alignment: Alignment.centerLeft,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
-          child: OutlinedButton.icon(
-            onPressed: vm.refreshPermissionCatalog,
-            icon: const Icon(Icons.shield_outlined, size: 15),
-            label: Text(s.get('switch_permission'), style: const TextStyle(fontSize: 11)),
-          ),
-        ),
-      );
-    }
+    final presets = permissionPresetsFor(catalog);
+    final projection = state.history == null
+        ? ''
+        : (permissionSelectOf(state.history!)?.currentValue ?? '');
+    final current = permissionCurrentValue(catalog: catalog, projectionValue: projection);
+    final scheme = Theme.of(context).colorScheme;
     return SizedBox(
-      height: 40,
+      height: 42,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        itemCount: options.length,
+        padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
+        itemCount: presets.length,
         separatorBuilder: (_, _) => const SizedBox(width: 6),
         itemBuilder: (BuildContext context, int index) {
-          final option = options[index];
+          final preset = presets[index];
+          final selected = preset.value == current;
           return ChoiceChip(
-            label: Text(option.name, style: const TextStyle(fontSize: 11)),
-            selected: option.value == catalog!.currentValue,
-            onSelected: (_) => _confirmPermission(option),
+            label: Text(
+              preset.label(state.languageTag),
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+              ),
+            ),
+            selected: selected,
+            showCheckmark: true,
+            selectedColor: scheme.primaryContainer,
+            side: BorderSide(
+              color: selected ? scheme.primary : scheme.outlineVariant,
+            ),
+            onSelected: (_) => _confirmPermission(preset, catalog),
           );
         },
       ),
     );
   }
 
-  Future<void> _confirmPermission(PermissionOption option) async {
-    if (option.value == vm.state.permissionCatalog?.currentValue) {
+  Future<void> _confirmPermission(PermissionPreset preset, PermissionSelect? catalog) async {
+    final projection = vm.state.history == null
+        ? ''
+        : (permissionSelectOf(vm.state.history!)?.currentValue ?? '');
+    final current = permissionCurrentValue(catalog: catalog, projectionValue: projection);
+    if (preset.value == current) {
       return;
     }
     final ok = await confirmDialog(
       context,
       title: s.get('switch_permission'),
-      message: option.description ?? option.name,
+      message: permissionPresetDescription(catalog, preset.value) ??
+          preset.label(vm.state.languageTag),
       confirmLabel: s.get('confirm'),
       cancelLabel: s.get('cancel'),
     );
     if (ok) {
-      await vm.selectPermissionPreset(option.value);
+      await vm.selectPermissionPreset(preset.value);
+    }
+  }
+
+  /// 把聊天里的图片存进系统相册（只申请「添加」权限，不申请读取整库）。
+  Future<void> _saveImageToAlbum(String name, List<int> bytes) async {
+    try {
+      var granted = await Gal.hasAccess(toAlbum: true);
+      if (!granted) {
+        granted = await Gal.requestAccess(toAlbum: true);
+      }
+      if (!granted) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(s.get('album_denied'))));
+        }
+        return;
+      }
+      final baseName = name.replaceAll(RegExp(r'\.[^./]+$'), '');
+      await Gal.putImageBytes(Uint8List.fromList(bytes), name: baseName.isEmpty ? 'DSH' : baseName);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(s.get('saved_to_album'))));
+      }
+    } on Object catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(s.get('album_failed').replaceAll('{reason}', '$error'))),
+        );
+      }
     }
   }
 

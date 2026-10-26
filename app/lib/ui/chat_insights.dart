@@ -1,7 +1,7 @@
 /// 聊天页的洞察入口（待办 / 交付物 / 统计 / 轨迹），同为 `chat_screen.dart` 的 part 扩展。
 part of 'chat_screen.dart';
 
-extension ChatInsightsActions on _ChatScreenState {
+extension _ChatInsightsActions on _ChatScreenState {
   // ————————————————— 洞察 / 统计 / 轨迹 —————————————————
 
   void _showInsights(BuildContext context) {

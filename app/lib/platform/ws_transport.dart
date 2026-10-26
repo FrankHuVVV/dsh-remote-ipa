@@ -10,6 +10,7 @@ import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../core/dsh_client.dart';
+import '../core/socket_url.dart';
 
 class WebSocketTransportImpl implements WebSocketTransport {
   const WebSocketTransportImpl();
@@ -32,7 +33,7 @@ class _SocketHandle implements EventSocketHandle {
 
     try {
       _channel = IOWebSocketChannel.connect(
-        Uri.parse(url),
+        Uri.parse(socketUrlOf(url)),
         headers: headers,
         pingInterval: const Duration(milliseconds: wsPingIntervalMs),
         connectTimeout: const Duration(milliseconds: connectTimeoutMs),
