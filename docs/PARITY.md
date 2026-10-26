@@ -53,7 +53,7 @@
 | 停止运行 | `chat/runs/{id}/cancel` | 有 | 有 | ✅ | |
 | 断档检测 / 重连重取 | WS seq | 有 | `ChatSeqMonitor` | ✅ | 严格跳号才重拉 |
 | 图片（历史附件 / 交接图） | `attachments` / `resolve` | 有 | 有 | ✅ | 两条取字节路径；**助手消息里的 image 块与交接图也会显示** |
-| 图片全屏 + 保存 | 系统面板 | 有 | 有 | ✅ | **保存到相册**（`gal`）与「存到文件」两条路 |
+| 图片全屏 + 保存 | 系统面板 | 有 | 全屏路由 | ✅ | 固定关闭按钮；**保存到相册**（`gal`）与「存到文件」两条路 |
 | **交付物展示** | `deliverables/presented` | 有 | 洞察面板 | ✅ | 点开走 `resolvePath` + 读文件 |
 | **会话待办（TODO）** | `projections.values.todos` | 有 | 洞察面板 | ✅ | 列表行上的摘要仍未做 |
 | **执行统计** | 无 | 有 | `core/session_stats.dart` | ✅ | 不显示 Token / 上下文 |

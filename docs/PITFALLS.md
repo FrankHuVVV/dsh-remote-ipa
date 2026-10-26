@@ -296,3 +296,12 @@ Dart 的 `dart:io WebSocket` 在握手前就检查 scheme，只接受 `ws` / `ws
 **怎么绕**：补这条说明；用 `gal` 的 `hasAccess(toAlbum: true)` / `requestAccess(...)`，
 只申请添加权限，不申请读取整库。
 
+### Dialog 放大图片会把按钮挤出屏幕
+
+**长什么样**：点开会话里的图，图片本身正常；双指放大后**没有关闭/保存按钮**，只能杀进程退出。
+**为什么**：`showDialog` + `Column(mainAxisSize: min)` 里的 `InteractiveViewer` 没有高度约束，
+图片按原始比例撑开，底部的操作行被顶到屏幕外；`Dialog` 又不会滚动，按钮等于不存在。
+**怎么绕**：图片查看用**全屏路由**（`ui/image_viewer.dart`）：
+`AppBar` 左上角固定关闭按钮，图片在 `Expanded` + `InteractiveViewer` 里，
+底部 `bottomNavigationBar` 固定操作条。Dialog 只适合“小、且不会长高”的内容。
+

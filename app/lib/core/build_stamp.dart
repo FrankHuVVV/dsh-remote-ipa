@@ -6,8 +6,8 @@ library;
 
 const String buildCommit = String.fromEnvironment('BUILD_COMMIT', defaultValue: 'dev');
 const String buildTime = String.fromEnvironment('BUILD_TIME', defaultValue: '');
-const String appVersion = String.fromEnvironment('APP_VERSION', defaultValue: '0.2.3');
-const String appBuildNumber = String.fromEnvironment('APP_BUILD_NUMBER', defaultValue: '5');
+const String appVersion = String.fromEnvironment('APP_VERSION', defaultValue: '0.2.4');
+const String appBuildNumber = String.fromEnvironment('APP_BUILD_NUMBER', defaultValue: '6');
 
 String get buildStampLine {
   final short = buildCommit.length > 7 ? buildCommit.substring(0, 7) : buildCommit;

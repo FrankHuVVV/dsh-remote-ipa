@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import '../core/chat_presentation.dart';
 import '../core/small_parts.dart';
 import '../l10n/strings.dart';
+import 'image_viewer.dart';
 import 'message_body.dart';
 
 class ChatMessageView extends StatelessWidget {
@@ -150,41 +151,15 @@ class ChatMessageView extends StatelessWidget {
   }
 
   void _showFullImage(BuildContext context, List<int> bytes, String name) {
-    showDialog<void>(
-      context: context,
-      builder: (BuildContext context) => Dialog(
-        backgroundColor: Colors.black,
-        insetPadding: const EdgeInsets.all(12),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            InteractiveViewer(
-              child: Image.memory(Uint8List.fromList(bytes), fit: BoxFit.contain),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  Text(name, style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                  if (onSaveToAlbum != null) ...<Widget>[
-                    const SizedBox(width: 12),
-                    TextButton(
-                      onPressed: () => onSaveToAlbum!(name, bytes),
-                      child: Text(strings.get('save_to_album')),
-                    ),
-                  ],
-                  if (onExportImage != null) ...<Widget>[
-                    const SizedBox(width: 4),
-                    TextButton(
-                      onPressed: () => onExportImage!(name, bytes),
-                      child: Text(strings.get('save_to_files')),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
+    // 全屏路由而不是 Dialog：Dialog 一放大就把关闭/保存按钮挤出屏幕（真机反馈）。
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) => ImageViewerPage(
+          name: name,
+          bytes: bytes,
+          strings: strings,
+          onSaveToAlbum: onSaveToAlbum,
+          onExportImage: onExportImage,
         ),
       ),
     );
