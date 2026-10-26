@@ -12,7 +12,7 @@ iOS 版（Flutter）已完成功能移植：连接 / 会话 / 聊天 / GenUI 卡
 
 ## 真机反馈（2026-10-26，0.2.1 首次侧载）
 
-用户在 iPhone 上实测 6 个问题，全部已修（0.2.2），**待重新构建后复验**：
+用户在 iPhone 上实测 6 个问题，全部已修（0.2.2）；**0.2.2 已重新构建出包（见下），待装机复验**：
 
 | # | 现象 | 根因 | 修复 |
 |---:|---|---|---|
@@ -30,7 +30,7 @@ iOS 版（Flutter）已完成功能移植：连接 / 会话 / 聊天 / GenUI 卡
 | 源码完成 | ✅ | `app/lib/` 约 13.7k 行 Dart（53 个文件），测试 2.1k 行，按 `core/state/ui/platform` 分层 |
 | 静态检查 | ✅ | `flutter analyze --no-fatal-infos` → **No issues found**（Flutter 3.47.8） |
 | 单测 | ✅ | `flutter test` → **179 passed**（2026-10-25，本机 Windows + Flutter 3.47.8） |
-| 打包（未签名 IPA） | ✅ | GitHub `macos-15` run [40207148670](https://github.com/FrankHuVVV/dsh-remote-ipa/actions/runs/40207148670)：IPA **7,907,704 B**，SHA-256 `e0563badfd2cf1dcfa6788d3c1cb1ee3a6ec84ba9f28f061a7d6c68ba15366e2`，已挂 Release v0.2.1 |
+| 打包（未签名 IPA） | ✅ | 最新：[`v0.2.2`](https://github.com/FrankHuVVV/dsh-remote-ipa/releases/tag/v0.2.2)（run 40294523178）IPA **7,987,474 B**，SHA-256 `127b4730c61e896c4cb6c7173b856882705f51ea8f374a1a38f892c2f453904f` |
 | 签名（爱思助手） | 🟡 | 流程写在 `docs/RELEASE.md`，未用真实 Apple ID 执行过 |
 | 装机（iLoader 侧载） | 🟡 | 未上机；iOS 27 开发者模式、证书信任未实测 |
 | 真机验证 | 🟡 | **0 项已确认**；清单见 `docs/PARITY.md` §6 |
@@ -62,6 +62,7 @@ bash tools/build_ios.sh 0.2.0 2        # 一键：analyze + test + build + 打�
 |---:|---|---|---|
 | #1 | `e71b066` / `v0.2.0` | ❌ 失败于 Build iOS app | 手写 `ios/Podfile` 与 SPM 工程混用 → `sandbox is not in sync with the Podfile.lock` |
 | #2 | `e33b8ab` / `v0.2.1` | ✅ 成功 | 删除 Podfile 后纯 SPM 构建通过；IPA 7.54 MiB，SHA-256 `e0563badfd2cf1dcfa6788d3c1cb1ee3a6ec84ba9f28f061a7d6c68ba15366e2` |
+| #3 | `d75a748` / `v0.2.2` | ✅ 成功 | 真机反馈修复版；IPA 7,987,474 B，SHA-256 `127b4730c61e896c4cb6c7173b856882705f51ea8f374a1a38f892c2f453904f`（run 40294523178） |
 
 修复提交见 `docs/CHANGELOG.md` 0.2.1 段；坑位说明见 `docs/PITFALLS.md#podfile-与-swift-package-manager-混用`。
 

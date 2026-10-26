@@ -34,7 +34,9 @@
 ### 验证
 
 - `flutter analyze` → No issues；`flutter test` → 179 passed。
-- 待云端 macOS 重新构建并装机复验（见 `docs/STATUS.md` 的「真机反馈」小节）。
+- GitHub `macos-15` 构建 **通过**（run 40294523178）：未签名 IPA 7,987,474 B，
+  SHA-256 `127b4730c61e896c4cb6c7173b856882705f51ea8f374a1a38f892c2f453904f`，随 Release v0.2.2 发布。
+  待装机复验六项修复（见 `docs/STATUS.md` 的「真机反馈」小节）。
 
 ## 0.2.1 — 2026-10-25
 
