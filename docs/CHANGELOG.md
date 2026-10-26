@@ -21,7 +21,8 @@
 
 - `flutter analyze` → No issues；`flutter test` → **195 passed**（新增 1 条 widget 测试：
   关闭按钮可返回、两个保存按钮可点）。
-- 待打包复验（等用户通知）。
+- GitHub `macos-15` 构建 **通过**（run 40311179367）：未签名 IPA 8,012,111 B，
+  SHA-256 `4ba10022e43545bd8d565df44ea949c9f593e9d2f680cad86c006ccb2f7e5ef3`，随 Release v0.2.4 发布；待装机复验。
 
 ## 0.2.3 — 2026-10-26
 
