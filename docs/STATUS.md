@@ -39,7 +39,7 @@ iOS 版（Flutter）已完成功能移植：连接 / 会话 / 聊天 / GenUI 卡
 | 源码完成 | ✅ | `app/lib/` 约 13.7k 行 Dart（53 个文件），测试 2.1k 行，按 `core/state/ui/platform` 分层 |
 | 静态检查 | ✅ | `flutter analyze --no-fatal-infos` → **No issues found**（Flutter 3.47.8） |
 | 单测 | ✅ | `flutter test` → **194 passed**（2026-10-25，本机 Windows + Flutter 3.47.8） |
-| 打包（未签名 IPA） | ✅ | 最新：[`v0.2.2`](https://github.com/FrankHuVVV/dsh-remote-ipa/releases/tag/v0.2.2)（run 40294523178）IPA **7,987,474 B**，SHA-256 `127b4730c61e896c4cb6c7173b856882705f51ea8f374a1a38f892c2f453904f` |
+| 打包（未签名 IPA） | ✅ | 最新：[`v0.2.3`](https://github.com/FrankHuVVV/dsh-remote-ipa/releases/tag/v0.2.3)（run 40298363470）IPA **8,009,457 B**，SHA-256 `8a3e208582dad989b051e763c8c948825cdeeda373c8d9e48a008444aa598111` |
 | 签名（爱思助手） | 🟡 | 流程写在 `docs/RELEASE.md`，未用真实 Apple ID 执行过 |
 | 装机（iLoader 侧载） | 🟡 | 未上机；iOS 27 开发者模式、证书信任未实测 |
 | 真机验证 | 🟡 | **0 项已确认**；清单见 `docs/PARITY.md` §6 |
@@ -72,6 +72,7 @@ bash tools/build_ios.sh 0.2.0 2        # 一键：analyze + test + build + 打�
 | #1 | `e71b066` / `v0.2.0` | ❌ 失败于 Build iOS app | 手写 `ios/Podfile` 与 SPM 工程混用 → `sandbox is not in sync with the Podfile.lock` |
 | #2 | `e33b8ab` / `v0.2.1` | ✅ 成功 | 删除 Podfile 后纯 SPM 构建通过；IPA 7.54 MiB，SHA-256 `e0563badfd2cf1dcfa6788d3c1cb1ee3a6ec84ba9f28f061a7d6c68ba15366e2` |
 | #3 | `d75a748` / `v0.2.2` | ✅ 成功 | 真机反馈修复版；IPA 7,987,474 B，SHA-256 `127b4730c61e896c4cb6c7173b856882705f51ea8f374a1a38f892c2f453904f`（run 40294523178） |
+| #4 | `b7fcc83` / `v0.2.3` | ✅ 成功 | WS/权限/分组/相册版；IPA 8,009,457 B，SHA-256 `8a3e208582dad989b051e763c8c948825cdeeda373c8d9e48a008444aa598111`（run 40298363470） |
 
 修复提交见 `docs/CHANGELOG.md` 0.2.1 段；坑位说明见 `docs/PITFALLS.md#podfile-与-swift-package-manager-混用`。
 
