@@ -154,6 +154,7 @@ class EventsChannel {
     required this.timers,
     required this.listener,
     required this.connectionListener,
+    this.downListener,
   });
 
   final String url;
@@ -162,6 +163,9 @@ class EventsChannel {
   final TimerBridge timers;
   final void Function(WorkspaceEvent event) listener;
   final void Function(bool open) connectionListener;
+
+  /// 掉线原因（诊断用）：`onDown` 的原文，可能是 401 / 网络不可达 / 服务端关闭。
+  final void Function(String reason)? downListener;
 
   bool _closed = false;
   int _retries = 0;
@@ -196,6 +200,7 @@ class EventsChannel {
         if (_closed) {
           return;
         }
+        downListener?.call(reason);
         connectionListener(false);
         final delaySeconds = (1 << (_retries > 5 ? 5 : _retries)).clamp(1, wsMaxBackoffSeconds);
         _retries += 1;
@@ -593,6 +598,7 @@ class DshClient {
   EventsChannel events({
     required void Function(WorkspaceEvent event) listener,
     required void Function(bool open) connection,
+    void Function(String reason)? down,
   }) {
     final socket = deps.socket;
     final timers = deps.timers;
@@ -601,11 +607,12 @@ class DshClient {
     }
     final channel = EventsChannel(
       url: eventsUrl,
-      headers: _authHeaders(),
+      headers: _wsHeaders(),
       socket: socket,
       timers: timers,
       listener: listener,
       connectionListener: connection,
+      downListener: down,
     );
     channel.start();
     return channel;
@@ -637,6 +644,21 @@ class DshClient {
       'Accept': 'application/json',
       'Authorization': 'Bearer $token',
       // 界面语言随每个请求出海：服务端的图片交接说明要说用户看得懂的语言。
+      'Accept-Language': deps.languageTag(),
+    };
+  }
+
+  /// WS 握手头：**不带 `Accept: application/json`**。
+  ///
+  /// 部分中继/网关会把带 Accept 的 Upgrade 请求当成普通 GET 处理，回 406/400，
+  /// 表现就是「REST 全正常、事件流一直掉线」。只保留鉴权与语言两个必要头。
+  Map<String, String> _wsHeaders() {
+    final token = this.token;
+    if (token == null) {
+      throw StateError('DshClient: 事件流需要设备令牌');
+    }
+    return <String, String>{
+      'Authorization': 'Bearer $token',
       'Accept-Language': deps.languageTag(),
     };
   }

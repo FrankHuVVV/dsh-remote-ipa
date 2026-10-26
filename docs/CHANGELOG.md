@@ -6,6 +6,36 @@
 
 （尚无）
 
+## 0.2.2 — 2026-10-26
+
+首次真机侧载（0.2.1）后按用户反馈修的六处问题。
+
+### 修复
+
+- **会话工作区看不到**：会话行补 `cwd`，聊天页副标题改为「运行态 · 工作区 · cwd」。
+- **会话内没有权限档位**：聊天页新增权限按钮条，候选项来自 `chat/permission-presets`，
+  切换走 `/permission <preset>`（与鸿蒙版同一条命令路径），切换前二次确认。
+- **表格/图表显示成竖排单字**：Markdown 表格此前用 `FlexColumnWidth` 放在**横向滚动**里，
+  宽度无界会被压成每列接近 0；改为 `LayoutBuilder` 算固定列宽（≥96vp）后外层横向滚。
+- **一直显示离线**：① WS 握手去掉 `Accept: application/json`（部分中继会把它当普通 GET 拒掉）；
+  ② 设置页显示 WS 掉线原因；③ WS 未连上时以 5s 轮询兜底补历史与审批，不再「在线但不动」。
+- **模型回复的图片看不到**：`assistantItems` 以前只认 text / reasoning，`image` 块整类丢弃；
+  现在助手消息里的图片块与 `[Image: source: …]` 交接图都会变成附件并显示；
+  正文里的本地路径链接改为交给 ViewModel `resolvePath` + 文件预览，而不是丢给系统浏览器。
+- **“+”选不了相册**：附件入口改为「从图库选择 / 从文件选择」，图库走 `image_picker`（PHPicker，
+  无需相册写入权限），文件仍走 `file_picker`。
+
+### 变更
+
+- 版本 / 构建号：`0.2.2+4`；`build_stamp` 与 `MARKETING_VERSION` 同步。
+- 新增依赖：`image_picker ^1.2.4`（仅用于从相册选图）。
+- 单测：179 条（新增 4 条助手图片/交接图回归）。
+
+### 验证
+
+- `flutter analyze` → No issues；`flutter test` → 179 passed。
+- 待云端 macOS 重新构建并装机复验（见 `docs/STATUS.md` 的「真机反馈」小节）。
+
 ## 0.2.1 — 2026-10-25
 
 修复首次云端构建失败（`v0.2.0` 的 run 在 Build iOS app 步骤报

@@ -124,6 +124,9 @@ class HarnessState {
   Set<String> attachmentLoading = <String>{};
 
   bool eventsConnected = false;
+
+  /// 事件流上一次断开的原因（诊断用：设置页会显示，便于查「在线却显示离线」）。
+  String? eventsLastError;
   int? lastEventSeq;
   int? baselineCursor;
 

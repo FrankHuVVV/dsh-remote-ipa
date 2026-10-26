@@ -232,3 +232,39 @@ CocoaPods 集成，两套依赖系统互相改 project / xcconfig，构建期必
 `POST .../commands`，而不是 `POST .../messages`。
 **怎么绕**：输入以 `/` 开头且没有附件时走 `executeCommand`（`chat_screen.dart` 的 `_send`）；
 同时保留 `/` 前缀候选面板（整行、无空白才出）。
+
+### Markdown 表格在横向滚动里被压成竖排
+
+**长什么样**：表格每一格只剩一个字符宽，整张表变成一列竖排文字（真机截图里就是“值 / W / 4 / d / 0 …”）。
+**为什么**：`Table` 的 `FlexColumnWidth` 需要一个**有界**宽度；把它放进横向 `SingleChildScrollView`
+后约束变成无界，列宽被算成接近 0，文字只能逐字换行。
+**怎么绕**：用 `LayoutBuilder` 拿可用宽度，自己算固定列宽（不低于 96vp），
+再用 `SizedBox(width: 列宽 × 列数)` 包住 `Table`，横向滚动只负责“装不下时能滑”。
+GenUI 的 `table` 节点同理（`genUiTableColumnWidth` 已有下限）。
+
+### 助手消息里的 image 块被丢弃
+
+**长什么样**：用户自己发的图能预览，**模型回复的图看不到**；PC 端点一下能出预览，手机端点没反应。
+**为什么**：`assistantItems` 只处理 `text` / `reasoning` 两类内容块，`{type:"image",attachment:{…}}`
+落到兜底分支被整类丢掉；而用户消息走的是 `contentAttachments`，所以只有“发出去的图”能显示。
+**怎么绕**：助手消息解析时同样收集 `image` 块与 `[Image: source: …]` 交接标记，
+挂到对应显示项上；正文里的本地路径链接交给 ViewModel 的 `openChatPath`（resolvePath + 预览），
+不要丢给 `url_launcher`（它只会打开一个空白页）。
+
+### WS 经中继被拒时界面像在线但不动
+
+**长什么样**：会话列表能刷出来、发消息有回，但设置页一直「离线」；新消息不自己出现，要退出重进。
+**为什么**：REST 走的是普通 HTTPS，WS 要经过网关的 Upgrade。部分中继会把带
+`Accept: application/json` 的握手当普通 GET 处理（406/400），于是事件流永远连不上；
+而界面只在 WS `onOpen` 时才显示在线——REST 通、WS 不通时看起来就是“在线却显示离线”。
+**怎么绕**：① 握手只带 `Authorization` 与 `Accept-Language`；② 设置页显示 WS 掉线原因；
+③ WS 未连上时用 5s 轮询兜底补历史与审批，避免“消息永远不动”。
+
+### file_picker 只能选文件，不是相册
+
+**长什么样**：点聊天框的「+」，弹出的是「文件」App，没有照片图库。
+**为什么**：`file_picker` 在 iOS 上走的是 `UIDocumentPicker`；相册需要 `PHPicker`
+（`image_picker`），两者不是同一个系统面板。
+**怎么绕**：附件入口给两个来源：「从图库选择」走 `image_picker`（PHPicker 不需要相册写入权限），
+「从文件选择」走 `file_picker`。不要试图用 `FileType.image` 让文件选择器去翻相册。
+

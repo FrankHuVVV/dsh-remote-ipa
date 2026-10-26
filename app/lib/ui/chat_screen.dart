@@ -9,6 +9,7 @@ library;
 import 'dart:async';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../core/chat_presentation.dart';
@@ -24,6 +25,9 @@ import 'chat_message.dart';
 import 'files_screen.dart';
 import 'session_insights.dart';
 import 'widgets.dart';
+
+part 'chat_composer.dart';
+part 'chat_insights.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key, required this.viewModel});
@@ -81,6 +85,15 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  /// 供 part 扩展触发的重建（`setState` 是 protected，扩展里不能直接调）。
+  void _refresh([VoidCallback? mutate]) {
+    if (mutate == null) {
+      setState(() {});
+    } else {
+      setState(mutate);
+    }
+  }
+
   void _jumpToBottom() {
     if (!_scroll.hasClients) {
       return;
@@ -110,7 +123,9 @@ class _ChatScreenState extends State<ChatScreen> {
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
                 Text(
-                  session != null && session.running ? s.get('running') : s.get('idle'),
+                  _headerSubtitle(session),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ),
               ],
@@ -142,6 +157,7 @@ class _ChatScreenState extends State<ChatScreen> {
             children: <Widget>[
               if (state.error != null) ErrorBar(message: state.error!, onDismiss: vm.clearError),
               if (state.notice != null) NoticeBar(message: state.notice!, onDismiss: vm.clearNotice),
+              _permissionBar(context, state),
               if (state.approvals.isNotEmpty) _approvalCard(context, state),
               if (state.questions.isNotEmpty) _questionCards(context, state),
               Expanded(child: _messages(context, state)),
@@ -234,6 +250,7 @@ class _ChatScreenState extends State<ChatScreen> {
           attachmentLoading: state.attachmentLoading,
           onLoadAttachment: vm.loadAttachment,
           onAnswer: (String text) => vm.sendMessage(text),
+          onOpenPath: (String path) => unawaited(_openChatPath(path)),
           onExportImage: (String name, List<int> bytes) => vm.exportBytes(name, bytes),
           onFork: (ChatDisplayItem chatItem) async {
             final ok = await confirmDialog(
@@ -432,296 +449,94 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  // ————————————————— 输入区 —————————————————
+  // ————————————————— 头部 / 权限 / 图片路径 —————————————————
 
-  Widget _composerBar(BuildContext context, HarnessState state) {
-    final session = state.currentSession;
-    final running = session?.running ?? false;
-    final steer = state.busySendMode == sendModeSteer;
-    return SafeArea(
-      top: false,
-      child: Container(
-        decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant)),
-        ),
-        padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            if (_attachments.isNotEmpty)
-              SizedBox(
-                height: 44,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _attachments.length,
-                  separatorBuilder: (_, _) => const SizedBox(width: 6),
-                  itemBuilder: (BuildContext context, int index) {
-                    final attachment = _attachments[index];
-                    return Chip(
-                      label: Text(
-                        attachment.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 11),
-                      ),
-                      onDeleted: () => setState(() => _attachments.removeAt(index)),
-                    );
-                  },
-                ),
-              ),
-            _suggestions(context, state),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: <Widget>[
-                IconButton(
-                  tooltip: s.get('attach'),
-                  onPressed: () => _pickAttachment(context),
-                  icon: state.attachmentUploading
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.add_circle_outline),
-                ),
-                if (running)
-                  TextButton(
-                    onPressed: () => vm.setSendMode(steer ? sendModeQueue : sendModeSteer),
-                    child: Text(
-                      steer ? s.get('steer') : s.get('queue'),
-                      style: const TextStyle(fontSize: 11),
-                    ),
-                  ),
-                Expanded(
-                  child: TextField(
-                    controller: _composer,
-                    minLines: 1,
-                    maxLines: 5,
-                    textInputAction: TextInputAction.newline,
-                    onChanged: (_) => setState(() {}),
-                    decoration: InputDecoration(
-                      hintText: s.get('message_hint'),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(20)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                IconButton.filled(
-                  onPressed: running ? vm.cancelRun : _send,
-                  icon: Icon(running ? Icons.stop : Icons.arrow_upward),
-                  tooltip: running ? s.get('stop') : s.get('send'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
+  String _headerSubtitle(ChatSession? session) {
+    if (session == null) {
+      return s.get('idle');
+    }
+    final parts = <String>[session.running ? s.get('running') : s.get('idle')];
+    final workspace = session.workspaceTitle ?? (session.workspaceId == null ? '' : session.workspaceId!);
+    if (workspace.isNotEmpty) {
+      parts.add(workspace);
+    }
+    if (session.cwd.isNotEmpty) {
+      parts.add(session.cwd);
+    }
+    return parts.join(' · ');
   }
 
-  Future<void> _send() async {
-    final text = _composer.text;
-    final trimmed = text.trim();
-    if (trimmed.isEmpty && _attachments.isEmpty) {
-      return;
-    }
-    if (trimmed.startsWith('/') && _attachments.isEmpty) {
-      _composer.clear();
-      setState(() {});
-      await vm.sendCommand(trimmed);
-      return;
-    }
-    _composer.clear();
-    final attachments = List<PendingAttachment>.of(_attachments);
-    setState(_attachments.clear);
-    await vm.sendMessage(text, attachments: attachments);
-    if (mounted) {
-      FocusScope.of(context).unfocus();
-    }
-  }
-
-  Future<void> _pickAttachment(BuildContext context) async {
-    try {
-      // file_picker 13 的静态入口（旧版的 `FilePicker.platform.pickFiles` 已移除）。
-      final file = await FilePicker.pickFile();
-      if (file == null) {
-        return;
-      }
-      final bytes = await file.readAsBytes();
-      final lower = file.name.toLowerCase();
-      final isImage = lower.endsWith('.png') ||
-          lower.endsWith('.jpg') ||
-          lower.endsWith('.jpeg') ||
-          lower.endsWith('.gif') ||
-          lower.endsWith('.webp') ||
-          lower.endsWith('.heic');
-      final PendingAttachment? attachment = isImage
-          ? vm.makeImageAttachment(file.name, bytes)
-          : await vm.uploadFileAttachment(file.name, bytes);
-      if (attachment != null && mounted) {
-        setState(() => _attachments.add(attachment));
-      }
-    } on Object catch (error) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(s.get('pick_file_failed').replaceAll('{reason}', '$error'))),
-        );
-      }
-    }
-  }
-
-  // ————————————————— @ 文件 / `/` 命令补全 —————————————————
-
-  Widget _suggestions(BuildContext context, HarnessState state) {
-    final text = _composer.text;
-    final scheme = Theme.of(context).colorScheme;
-    final commands = commandSuggestions(text, state.commands);
-    if (commands.isNotEmpty) {
-      return _suggestionPanel(
-        context,
-        title: s.get('commands'),
-        children: <Widget>[
-          for (final command in commands)
-            ListTile(
-              dense: true,
-              title: Text('/${command.name}', style: const TextStyle(fontSize: 14)),
-              subtitle: command.description.isEmpty
-                  ? null
-                  : Text(command.description, style: const TextStyle(fontSize: 11)),
-              onTap: () => _applyCommand(command),
-            ),
-        ],
-      );
-    }
-    if (activeStart(text) == null) {
-      return const SizedBox.shrink();
-    }
-    final entries = mentionMatches(state.mentionEntries, mentionQuery(text) ?? '');
-    if (entries.isEmpty) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        color: scheme.surfaceContainerHighest.withValues(alpha: 0.4),
-        child: Text(
-          state.mentionFailed ? s.get('mention_failed') : s.get('mention_no_entries'),
-          style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+  /// 会话内的权限档位按钮条：候选项来自 `chat/permission-presets`，切换走 `/permission`。
+  Widget _permissionBar(BuildContext context, HarnessState state) {
+    final catalog = state.permissionCatalog;
+    final options = catalog?.options ?? const <PermissionOption>[];
+    if (options.isEmpty) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
+          child: OutlinedButton.icon(
+            onPressed: vm.refreshPermissionCatalog,
+            icon: const Icon(Icons.shield_outlined, size: 15),
+            label: Text(s.get('switch_permission'), style: const TextStyle(fontSize: 11)),
+          ),
         ),
       );
     }
-    return _suggestionPanel(
-      context,
-      title: s.get('mention_hint'),
-      children: <Widget>[
-        for (final entry in entries)
-          ListTile(
-            dense: true,
-            leading: Text(entry.isDirectory() ? '📁' : '📄', style: const TextStyle(fontSize: 15)),
-            title: Text(entry.name, style: const TextStyle(fontSize: 13)),
-            onTap: () => _applyMention(entry),
-          ),
-      ],
-    );
-  }
-
-  Widget _suggestionPanel(
-    BuildContext context, {
-    required String title,
-    required List<Widget> children,
-  }) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      width: double.infinity,
-      constraints: const BoxConstraints(maxHeight: 220),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 6, 12, 2),
-            child: Text(title, style: TextStyle(fontSize: 10, color: scheme.onSurfaceVariant)),
-          ),
-          Flexible(
-            child: ListView(
-              shrinkWrap: true,
-              padding: const EdgeInsets.only(bottom: 4),
-              children: children,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _applyMention(FileEntry entry) {
-    final path = vm.mentionAbsolutePath(entry);
-    final suffix = entry.isDirectory() ? '/' : ' ';
-    final next = applySelection(_composer.text, '$path$suffix');
-    _composer.value = TextEditingValue(
-      text: next,
-      selection: TextSelection.collapsed(offset: next.length),
-    );
-    setState(() {});
-  }
-
-  void _applyCommand(CommandDescriptor command) {
-    final next = '/${command.name} ';
-    _composer.value = TextEditingValue(
-      text: next,
-      selection: TextSelection.collapsed(offset: next.length),
-    );
-    setState(() {});
-  }
-
-  // ————————————————— 洞察 / 统计 / 轨迹 —————————————————
-
-  void _showInsights(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (BuildContext sheetContext) => SessionInsightsSheet(
-        state: vm.state,
-        strings: s,
-        onOpenDeliverable: (String path) {
-          Navigator.of(sheetContext).pop();
-          unawaited(_openDeliverable(path));
+    return SizedBox(
+      height: 40,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        itemCount: options.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 6),
+        itemBuilder: (BuildContext context, int index) {
+          final option = options[index];
+          return ChoiceChip(
+            label: Text(option.name, style: const TextStyle(fontSize: 11)),
+            selected: option.value == catalog!.currentValue,
+            onSelected: (_) => _confirmPermission(option),
+          );
         },
-        onOpenStats: () => _showStats(context),
-        onOpenTrajectory: () => _openTrajectory(context),
       ),
     );
   }
 
-  void _showStats(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (BuildContext context) => SafeArea(
-        child: SessionStatsView(stats: sessionStatsOf(vm.state.history), strings: s),
-      ),
-    );
-  }
-
-  void _openTrajectory(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (BuildContext context) => TrajectoryScreen(history: vm.state.history, strings: s),
-      ),
-    );
-  }
-
-  Future<void> _openDeliverable(String path) async {
-    final opened = await vm.openAbsolutePath(path);
-    if (!opened || !mounted) {
+  Future<void> _confirmPermission(PermissionOption option) async {
+    if (option.value == vm.state.permissionCatalog?.currentValue) {
       return;
     }
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (BuildContext context) => FileViewerScreen(viewModel: vm),
-      ),
+    final ok = await confirmDialog(
+      context,
+      title: s.get('switch_permission'),
+      message: option.description ?? option.name,
+      confirmLabel: s.get('confirm'),
+      cancelLabel: s.get('cancel'),
     );
+    if (ok) {
+      await vm.selectPermissionPreset(option.value);
+    }
   }
+
+  Future<void> _openChatPath(String path) async {
+    final opened = await vm.openChatPath(path);
+    if (!mounted) {
+      return;
+    }
+    if (opened) {
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (BuildContext context) => FileViewerScreen(viewModel: vm),
+        ),
+      );
+      return;
+    }
+    final failure = vm.state.fileError;
+    if (failure != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(failure)));
+    }
+  }
+
   void _showModelSheet(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,

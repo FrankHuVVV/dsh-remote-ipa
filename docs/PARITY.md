@@ -34,7 +34,7 @@
 
 | 能力 | 插件 API | 鸿蒙版 | iOS 版 | 状态 | 说明 |
 |---|---|---|---|---|---|
-| 会话列表 / 新建 / 重命名 / 分叉 / 归档 | `chat/sessions` | 有 | `ui/sessions_screen.dart` | ✅ | 分叉前二次确认 |
+| 会话列表 / 新建 / 重命名 / 分叉 / 归档 | `chat/sessions` | 有 | `ui/sessions_screen.dart` | ✅ | 行内显示工作区 + cwd；分叉前二次确认 |
 | 已归档列表 | `?archived=true` | 有 | 有 | ✅ | 能力位守卫，读不到不显示入口 |
 | 消息流 + 历史合并 | WS + `messages` | 有 | `core/chat_presentation*.dart` | ✅ | 生命周期事件不渲染为卡片 |
 | Markdown 渲染 | 无 | 有 | `core/markdown_lite.dart` | ✅ | 标题/列表/引用/代码/GFM 表格/分隔线 |
@@ -52,7 +52,7 @@
 | 模型切换 | `PUT .../model` | 有 | 有 | ✅ | 显示 routable 与失败原因 |
 | 停止运行 | `chat/runs/{id}/cancel` | 有 | 有 | ✅ | |
 | 断档检测 / 重连重取 | WS seq | 有 | `ChatSeqMonitor` | ✅ | 严格跳号才重拉 |
-| 图片（历史附件 / 交接图） | `attachments` / `resolve` | 有 | 有 | ✅ | 两条取字节路径 |
+| 图片（历史附件 / 交接图） | `attachments` / `resolve` | 有 | 有 | ✅ | 两条取字节路径；**助手消息里的 image 块与交接图也会显示** |
 | 图片全屏 + 导出 | 系统面板 | 有 | 有 | 🔵 | 导出到「文件」App 而不是相册 |
 | **交付物展示** | `deliverables/presented` | 有 | 洞察面板 | ✅ | 点开走 `resolvePath` + 读文件 |
 | **会话待办（TODO）** | `projections.values.todos` | 有 | 洞察面板 | ✅ | 列表行上的摘要仍未做 |
@@ -81,7 +81,7 @@
 | 供应商只读视图 | `settings/providers` | 有 | `ui/models_screen.dart` | ✅ | 不读凭据正文 |
 | **供应商编辑** | `PATCH settings/providers/{id}` | 有 | 有 | ✅ | apiKey 不回填；留空不修改 |
 | **发现模型** | `POST .../discover` | 有 | 有 | ✅ | |
-| **权限档位切换** | `POST commands`（`/permission`） | 有 | 有 | ✅ | 与鸿蒙版同一条命令路径 |
+| **权限档位切换** | `POST commands`（`/permission`） | 有 | 聊天页按钮条 | ✅ | 与鸿蒙版同一条命令路径；切换前二次确认 |
 | 主题 / 字号 / 中英 / 发送方式 | 无 | 有 | 有 | ✅ | |
 | 构建水印 | 无 | 有 | 有 | ✅ | CI 注入 commit / 时间 |
 | `useWebChat` 开关 | 无 | 保留并说明 | 不保留 | 🔵 | iOS 无 WebView 分支，假开关会误导 |
@@ -97,7 +97,7 @@
 | 本地网络权限 | 无此概念 | `NSLocalNetworkUsageDescription` | 🟡 | 真机第一次连接会弹权限 |
 | ATS 明文 | 不适用 | 仅 `NSAllowsLocalNetworking` | 🟡 | 公网中继必须 https |
 | 文件 App 可见（导出） | 系统面板 | `UIFileSharingEnabled` | 🟡 | 未在真机确认 |
-| 系统选择器（附件 / 上传） | `@ohos.file.picker` | `file_picker 13` | 🟡 | 静态 API |
+| 系统选择器（附件 / 上传） | `@ohos.file.picker` | `image_picker` + `file_picker 13` | 🟡 | 附件可选「图库 / 文件」两个来源 |
 
 ### 仍不做的（理由）
 

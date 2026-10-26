@@ -170,6 +170,17 @@ class SessionsScreen extends StatelessWidget {
                           ),
                         ),
                       ],
+                      if (session.cwd.isNotEmpty) ...<Widget>[
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            session.cwd,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 11, color: scheme.outline),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ],

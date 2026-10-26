@@ -12,11 +12,21 @@ import 'package:url_launcher/url_launcher.dart';
 import '../core/markdown_lite.dart';
 
 class MarkdownView extends StatelessWidget {
-  const MarkdownView(this.source, {super.key, this.shrinkWrap = true, this.textStyle});
+  const MarkdownView(
+    this.source, {
+    super.key,
+    this.shrinkWrap = true,
+    this.textStyle,
+    this.onOpenFile,
+  });
 
   final String source;
   final bool shrinkWrap;
   final TextStyle? textStyle;
+
+  /// 非 http(s) 链接的处理：聊天里的本地路径要交给 ViewModel 去 resolve + 预览，
+  /// 而不是丢给系统浏览器（那只会打开一个空白页）。
+  final void Function(String path)? onOpenFile;
 
   @override
   Widget build(BuildContext context) {
@@ -146,7 +156,7 @@ class MarkdownView extends StatelessWidget {
               ),
               recognizer: span.linkUrl == null
                   ? null
-                  : (TapGestureRecognizer()..onTap = () => _openUrl(context, span.linkUrl!)),
+                  : (TapGestureRecognizer()..onTap = () => _handleLink(context, span.linkUrl!)),
             ),
         ],
       ),
@@ -221,38 +231,60 @@ class MarkdownView extends StatelessWidget {
       );
     }
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Table(
-        defaultColumnWidth: const FlexColumnWidth(),
-        border: TableBorder.all(color: scheme.outlineVariant, width: 0.6),
-        children: <TableRow>[
-          TableRow(
-            decoration: BoxDecoration(color: scheme.surfaceContainerHighest.withValues(alpha: 0.5)),
-            children: <Widget>[
-              for (var i = 0; i < columns; i++)
-                cell(i < header.length ? header[i] : '', i, isHeader: true),
-            ],
-          ),
-          for (final row in rows)
-            TableRow(
-              children: <Widget>[
-                for (var i = 0; i < columns; i++) cell(i < row.length ? row[i] : '', i),
+    // 横向滚动会给出**无界宽度**，这时候 `FlexColumnWidth` 会把每一列压到接近 0，
+    // 于是每个字符各占一行（真机上看到的就是一列竖排文字）。
+    // 所以列宽必须自己算成固定值：装得下就铺满，装不下就横向滚。
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final available = constraints.maxWidth.isFinite ? constraints.maxWidth : 320.0;
+        final widthPerColumn = (available / columns).clamp(96.0, 320.0).toDouble();
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: SizedBox(
+            width: widthPerColumn * columns,
+            child: Table(
+              defaultColumnWidth: FixedColumnWidth(widthPerColumn),
+              border: TableBorder.all(color: scheme.outlineVariant, width: 0.6),
+              children: <TableRow>[
+                TableRow(
+                  decoration: BoxDecoration(color: scheme.surfaceContainerHighest.withValues(alpha: 0.5)),
+                  children: <Widget>[
+                    for (var i = 0; i < columns; i++)
+                      cell(i < header.length ? header[i] : '', i, isHeader: true),
+                  ],
+                ),
+                for (final row in rows)
+                  TableRow(
+                    children: <Widget>[
+                      for (var i = 0; i < columns; i++) cell(i < row.length ? row[i] : '', i),
+                    ],
+                  ),
               ],
             ),
-        ],
-      ),
+          ),
+        );
+      },
     );
   }
 
-  Future<void> _openUrl(BuildContext context, String url) async {
-    final uri = Uri.tryParse(url);
+  Future<void> _handleLink(BuildContext context, String target) async {
+    final lower = target.toLowerCase();
+    final isWeb = lower.startsWith('http://') || lower.startsWith('https://');
+    if (!isWeb) {
+      // 模型回复里的「路径链接」：交给上层（ViewModel）去 resolvePath + 预览。
+      final handler = onOpenFile;
+      if (handler != null) {
+        handler(target);
+        return;
+      }
+    }
+    final uri = Uri.tryParse(target);
     if (uri == null) {
       return;
     }
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!ok && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(url)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(target)));
     }
   }
 }

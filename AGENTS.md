@@ -48,7 +48,7 @@ Flutter 版本以 CI 为准：**3.47.8 / Dart 3.13.7**（`.github/workflows/ios-
 cd app
 flutter pub get
 flutter analyze --no-fatal-infos     # 必须 0 error / 0 warning；info 级不阻塞
-flutter test                         # 当前 175 用例，随代码变化勿当常量
+flutter test                         # 当前 179 用例，随代码变化勿当常量
 ```
 
 构建与打包**只能在 macOS 上做**（Windows 上能跑 analyze/test，不能出 IPA）：
@@ -195,6 +195,10 @@ lib/platform/← 唯一碰系统 API 的一层（HTTP / WS / 钥匙串 / 时区 
 - `导出走 Documents 而不是相册`
 - `@ 补全用绝对路径`
 - `斜杠命令不当消息发`
+- `Markdown 表格在横向滚动里被压成竖排`
+- `助手消息里的 image 块被丢弃`
+- `WS 经中继被拒时界面像在线但不动`
+- `file_picker 只能选文件，不是相册`
 
 > 新坑位：名字加进上面清单 + 原文写进 `docs/PITFALLS.md`，并补 `### 同名` 锚点。
 

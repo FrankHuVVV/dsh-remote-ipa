@@ -18,6 +18,7 @@ class MessageBodyView extends StatelessWidget {
     required this.strings,
     required this.onAnswer,
     this.enableGenUi = true,
+    this.onOpenFile,
   });
 
   final String body;
@@ -25,14 +26,17 @@ class MessageBodyView extends StatelessWidget {
   final void Function(String text) onAnswer;
   final bool enableGenUi;
 
+  /// 本地路径链接（模型回复里的图片/文件）交给上层预览。
+  final void Function(String path)? onOpenFile;
+
   @override
   Widget build(BuildContext context) {
     if (!enableGenUi) {
-      return MarkdownView(body);
+      return MarkdownView(body, onOpenFile: onOpenFile);
     }
     final segments = splitMessageBody(body);
     if (segments.length == 1 && segments.first.kind == MessageSegmentKind.prose) {
-      return MarkdownView(segments.first.text);
+      return MarkdownView(segments.first.text, onOpenFile: onOpenFile);
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -42,7 +46,7 @@ class MessageBodyView extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(bottom: 6),
             child: switch (segment.kind) {
-              MessageSegmentKind.prose => MarkdownView(segment.text),
+              MessageSegmentKind.prose => MarkdownView(segment.text, onOpenFile: onOpenFile),
               MessageSegmentKind.ui => _card(context, segment.text),
             },
           ),

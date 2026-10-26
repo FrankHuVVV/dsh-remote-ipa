@@ -74,6 +74,7 @@ class HarnessViewModel extends ChangeNotifier {
   String _timeZoneId = 'UTC';
   Timer? _chatRefreshTimer;
   Timer? _sessionsRefreshTimer;
+  Timer? _fallbackTimer;
   bool _chatRefreshInFlight = false;
   bool _chatRefreshPending = false;
   int _sessionGeneration = 0;
@@ -275,6 +276,7 @@ class HarnessViewModel extends ChangeNotifier {
     _events?.close();
     _events = null;
     _eventsPaused = false;
+    _stopFallbackPolling();
     _client = null;
     _chatRefreshTimer?.cancel();
     _sessionsRefreshTimer?.cancel();
@@ -478,11 +480,19 @@ class HarnessViewModel extends ChangeNotifier {
     _events = client.events(
       listener: _handleEvent,
       connection: _handleConnection,
+      down: (String reason) => _update((s) => s.eventsLastError = reason),
     );
+    // WS 还没连上时先用轮询兜底：否则「在线但收不到新消息」与「事件流坏了」分不清。
+    _startFallbackPolling();
   }
 
   void _handleConnection(bool connected) {
     _update((s) => s.eventsConnected = connected);
+    if (connected) {
+      _stopFallbackPolling();
+    } else {
+      _startFallbackPolling();
+    }
     if (connected && state.selectedSessionId != null) {
       // 重连成功 = 补拉错过的一切：历史、审批、问答、命令。
       _scheduleChatRefresh();
@@ -758,6 +768,28 @@ class HarnessViewModel extends ChangeNotifier {
       ..error = next.error;
   }
 
+  /// 事件流断开时的低频兜底轮询（5s）：只补当前会话历史与审批，不刷新整个仪表盘。
+  ///
+  /// 为什么需要它：WS 经中继时可能被拒（401 / 网关不支持 Upgrade），而 REST 一直正常。
+  /// 没有兜底时界面看起来「在线但永远不动」，比明确报错更难查。
+  void _startFallbackPolling() {
+    if (_fallbackTimer != null || _closed) {
+      return;
+    }
+    _fallbackTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!state.connected) {
+        return;
+      }
+      unawaited(loadHistory());
+      unawaited(refreshApprovals());
+    });
+  }
+
+  void _stopFallbackPolling() {
+    _fallbackTimer?.cancel();
+    _fallbackTimer = null;
+  }
+
   void _update(void Function(HarnessState s) mutate) {
     if (_closed) {
       return;
@@ -773,6 +805,7 @@ class HarnessViewModel extends ChangeNotifier {
     _sessionsRefreshTimer?.cancel();
     _events?.close();
     _events = null;
+    _stopFallbackPolling();
     super.dispose();
   }
 }

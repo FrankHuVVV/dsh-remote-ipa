@@ -424,9 +424,12 @@ List<ChatDisplayItem> assistantItems(SessionEvent event) {
 
   final result = <ChatDisplayItem>[];
   final prose = <String>[];
+  // 图片与交接说明可能夹在正文块之间；先攒着，flush 时挂到「前一发起」上，
+  // 这样图片会出现在它本该出现的位置，而不是全堆到消息末尾。
+  final pending = <ChatAttachment>[];
 
   void flush() {
-    if (prose.isEmpty) {
+    if (prose.isEmpty && pending.isEmpty) {
       return;
     }
     result.add(ChatDisplayItem(
@@ -434,9 +437,11 @@ List<ChatDisplayItem> assistantItems(SessionEvent event) {
       seq: event.seq,
       kind: ChatItemKind.assistant,
       body: prose.join('\n\n'),
+      attachments: <ChatAttachment>[...pending],
       time: event.time,
     ));
     prose.clear();
+    pending.clear();
   }
 
   for (final item in content) {
@@ -447,8 +452,17 @@ List<ChatDisplayItem> assistantItems(SessionEvent event) {
     final type = stringOrNull(value, 'type');
     if (type == 'text') {
       final text = stringOrNull(value, 'text');
-      if (text != null && isNotBlank(text)) {
-        prose.add(text);
+      if (text == null) {
+        continue;
+      }
+      // 交接说明（纯文本模型把图落到工作区）也会出现在助手正文里：
+      // 把标记行摘掉，路径变成可显示的附件（与用户消息同一套口径）。
+      for (final path in handoffPathsIn(text)) {
+        pending.add(handoffAttachment(path));
+      }
+      final stripped = stripHandoffLines(text);
+      if (isNotBlank(stripped)) {
+        prose.add(stripped);
       }
     } else if (type == 'reasoning') {
       flush();
@@ -459,6 +473,21 @@ List<ChatDisplayItem> assistantItems(SessionEvent event) {
           seq: event.seq,
           kind: ChatItemKind.reasoning,
           body: reasoning,
+          time: event.time,
+        ));
+      }
+    } else if (type == 'image') {
+      // 助手消息里的图片块：历史里是 {type:image, attachment:{attachmentId,...}}。
+      // 以前这里不认 image，于是「模型回复的图」在 iOS 上整类消失。
+      flush();
+      final images = contentAttachments(<Object?>[value]);
+      if (images.isNotEmpty) {
+        result.add(ChatDisplayItem(
+          id: '${event.seq}-assistant-image-${result.length}',
+          seq: event.seq,
+          kind: ChatItemKind.assistant,
+          body: '',
+          attachments: images,
           time: event.time,
         ));
       }

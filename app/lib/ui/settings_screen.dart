@@ -123,7 +123,22 @@ class SettingsScreen extends StatelessWidget {
               ListTile(
                 dense: true,
                 title: Text(s.get('settings_endpoint')),
-                subtitle: Text(state.endpoint, style: const TextStyle(fontSize: 12)),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(state.endpoint, style: const TextStyle(fontSize: 12)),
+                    if (!state.eventsConnected && state.eventsLastError != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          'WS: ${state.eventsLastError}',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.error),
+                        ),
+                      ),
+                  ],
+                ),
                 trailing: StatusLabel(
                   label: state.eventsConnected ? s.get('settings_online') : s.get('settings_offline'),
                   active: state.eventsConnected,

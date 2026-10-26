@@ -296,6 +296,37 @@ extension HarnessFilesActions on HarnessViewModel {
   // ---------------------------------------------------------------------------
 
   /// 解析绝对路径并读进 `document`；返回 false 表示不属于任何授权根（正常结果）。
+  /// 从聊天里打开一个「路径状」的链接：绝对路径、`file://`、或相对会话 cwd 的路径。
+  ///
+  /// 模型回复里给的图片/文件常是这三种形态之一；先按绝对路径试，再按 cwd 拼，
+  /// 最后再交给服务端解析 —— 每一步都是「能打开就停」，不会因为一种形态失败就整条打不开。
+  Future<bool> openChatPath(String raw) async {
+    var path = raw.trim();
+    if (path.isEmpty) {
+      return false;
+    }
+    if (path.startsWith('file://')) {
+      path = Uri.parse(path).toFilePath();
+    } else if (!path.startsWith('/') && !path.contains('://')) {
+      try {
+        path = Uri.decodeComponent(path);
+      } on Object {
+        // 保留原样：不是合法编码时按字面路径处理。
+      }
+    }
+    final cwd = state.currentSession?.cwdAbsolute;
+    final candidates = <String>[
+      path,
+      if (!path.startsWith('/') && cwd != null && cwd.isNotEmpty) '$cwd/$path',
+    ];
+    for (final candidate in candidates) {
+      if (await openAbsolutePath(candidate)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   Future<bool> openAbsolutePath(String absolutePath) async {
     final client = _client;
     if (client == null) {

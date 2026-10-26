@@ -1,14 +1,27 @@
 # 状态
 
-> 更新时间：2026-10-25（版本 0.2.0+2）。**四态必须分清**：打包 → 签名 → 装机 → 验证。
+> 更新时间：2026-10-26（版本 0.2.2+4）。**四态必须分清**：打包 → 签名 → 装机 → 验证。
 > 本页只写**实测过**的东西；没上过真机的一律 🟡。
 
 ## 一句话
 
 iOS 版（Flutter）已完成功能移植：连接 / 会话 / 聊天 / GenUI 卡片 / 审批 / 问答 /
 `@` 文件与 `/` 命令补全 / 文件（浏览·编辑·上传·回收站·导出）/ 插件 / 模型（含供应商编辑）/
-设置 / 轨迹与统计，全部可用。`flutter analyze` **No issues**、`flutter test` **175 用例全绿**。
+设置 / 轨迹与统计，全部可用。`flutter analyze` **No issues**、`flutter test` **179 用例全绿**。
 **已在 GitHub 的 macOS runner 上出包**（未签名 IPA，见下）；签名与装机尚未执行。
+
+## 真机反馈（2026-10-26，0.2.1 首次侧载）
+
+用户在 iPhone 上实测 6 个问题，全部已修（0.2.2），**待重新构建后复验**：
+
+| # | 现象 | 根因 | 修复 |
+|---:|---|---|---|
+| 1 | 会话界面看不到工作区 | 聊天页副标题只有运行态 | 副标题显示「运行态 · 工作区 · cwd」，列表行补 cwd |
+| 2 | 会话内没有权限档位按钮 | 权限只放在「模型」页 | 聊天页新增档位按钮条，走 `/permission` |
+| 3 | 表格/图表显示成竖排单字 | Markdown 表格在横向滚动里用了 `FlexColumnWidth`（无界宽度） | 固定列宽 ≥96vp + 外层横向滚 |
+| 4 | 设置页一直显示离线 | WS 握手带 `Accept: application/json`，中继可能拒；且无兜底 | 握手只带鉴权与语言；显示掉线原因；5s 轮询兜底 |
+| 5 | 模型回复的图片看不到 | `assistantItems` 忽略 `image` 块与交接标记 | 助手消息解析图片块/交接图，附件正常显示；路径链接改为应用内预览 |
+| 6 | “+”无法从图库选图 | 只用了 `file_picker`（文件选择器） | 改为「图库 / 文件」两个来源，图库走 `image_picker` |
 
 ## 四态
 
@@ -16,7 +29,7 @@ iOS 版（Flutter）已完成功能移植：连接 / 会话 / 聊天 / GenUI 卡
 |---|---|---|
 | 源码完成 | ✅ | `app/lib/` 约 13.7k 行 Dart（53 个文件），测试 2.1k 行，按 `core/state/ui/platform` 分层 |
 | 静态检查 | ✅ | `flutter analyze --no-fatal-infos` → **No issues found**（Flutter 3.47.8） |
-| 单测 | ✅ | `flutter test` → **175 passed**（2026-10-25，本机 Windows + Flutter 3.47.8） |
+| 单测 | ✅ | `flutter test` → **179 passed**（2026-10-25，本机 Windows + Flutter 3.47.8） |
 | 打包（未签名 IPA） | ✅ | GitHub `macos-15` run [40207148670](https://github.com/FrankHuVVV/dsh-remote-ipa/actions/runs/40207148670)：IPA **7,907,704 B**，SHA-256 `e0563badfd2cf1dcfa6788d3c1cb1ee3a6ec84ba9f28f061a7d6c68ba15366e2`，已挂 Release v0.2.1 |
 | 签名（爱思助手） | 🟡 | 流程写在 `docs/RELEASE.md`，未用真实 Apple ID 执行过 |
 | 装机（iLoader 侧载） | 🟡 | 未上机；iOS 27 开发者模式、证书信任未实测 |

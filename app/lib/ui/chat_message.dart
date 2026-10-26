@@ -24,6 +24,7 @@ class ChatMessageView extends StatelessWidget {
     required this.attachmentLoading,
     required this.onLoadAttachment,
     required this.onAnswer,
+    this.onOpenPath,
     this.onExportImage,
     this.onFork,
   });
@@ -36,6 +37,7 @@ class ChatMessageView extends StatelessWidget {
   final Set<String> attachmentLoading;
   final void Function(ChatAttachment attachment) onLoadAttachment;
   final void Function(String text) onAnswer;
+  final void Function(String path)? onOpenPath;
   final Future<void> Function(String name, List<int> bytes)? onExportImage;
   final void Function(ChatDisplayItem item)? onFork;
 
@@ -233,7 +235,11 @@ class ChatMessageView extends StatelessWidget {
             body: item.body,
             strings: strings,
             onAnswer: onAnswer,
+            onOpenFile: onOpenPath,
           ),
+          // 模型回复的图片（历史消息里的 image 块 / 交接图）必须显示出来：
+          // 用户发出去的图能预览、模型回的图不能，是最容易让人觉得「客户端坏了」的不对称。
+          _attachments(context),
           if (item.streaming)
             Padding(
               padding: const EdgeInsets.only(top: 6),

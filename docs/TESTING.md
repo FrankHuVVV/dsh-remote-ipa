@@ -5,7 +5,7 @@
 ```bash
 cd app
 flutter analyze --no-fatal-infos   # 0 error / 0 warning
-flutter test                       # 175 用例（2026-10-25）
+flutter test                       # 179 用例（2026-10-26）
 flutter test test/harness_view_model_test.dart          # 单文件
 flutter test --plain-name '审批决定打到正确端点'          # 单用例
 ```
@@ -39,10 +39,11 @@ flutter test --plain-name '审批决定打到正确端点'          # 单用例
 | `session_stats_trajectory_test.dart` | 事件计数、轮次分组、耗时三种不给值、短耗时格式 | 13 |
 | `small_parts_test.dart` | 字号/主题/发送方式、体积、分组、时间标签、seq 监控、能力位、请求闸 | 17 |
 | `dsh_client_test.dart` | URL 拼装、鉴权头、请求体两种形状、ETag 条件、路径编码、错误映射、WS | 15 |
+| `chat_images_test.dart` | 助手消息的 image 块、交接标记、只发图不发字 | 4 |
 | `harness_view_model_test.dart` | 自动连接、快照、选会话、审批、发消息、实时增量、能力位、导入、断开、偏好 | 11 |
 | `widget_test.dart` | 冷启动渲染连接页 | 1 |
 
-合计 **175**（`flutter test` 实测；新增 54 条中 GenUI 17、补全 24、统计与轨迹 13）。
+合计 **179**（`flutter test` 实测；新增 54 条中 GenUI 17、补全 24、统计与轨迹 13）。
 
 ## 三条不变量（必须一直被钉住）
 
